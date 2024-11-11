@@ -44,14 +44,6 @@ fn handle_window_opened_or_changed(
 ) {
     if !known_window_ids.contains(&window.id) {
         known_window_ids.push(window.id);
-        handle_window_opened(window, window_rules);
-    }
-}
-
-fn handle_window_opened(window: &Window, window_rules: &WindowRules) {
-    for (matcher, action) in window_rules {
-        if matcher.match_window(window) {
-            action.perform(window.id);
-        }
+        window_rules.evaluate(window);
     }
 }
