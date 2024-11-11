@@ -103,10 +103,14 @@ impl WindowRule {
 }
 
 pub fn read_config() -> WindowRules {
-    let home_path = env::var("HOME").expect("$HOME not set");
-    let config_path = Path::new(&home_path)
-        .join(".config")
-        .join("niri-helper.toml");
+    let config_dir = env::var("XDG_CONFIG_HOME").map_or_else(
+        |_| {
+            let home_path = env::var("HOME").expect("Neither $HOME nor $XDG_CONFIG_HOME set");
+            Path::new(&home_path).join(".config")
+        },
+        |path| Path::new(&path).to_path_buf(),
+    );
+    let config_path = config_dir.join("niri-helper.toml");
 
     let content = fs::read_to_string(config_path).expect("Failed to read config file");
     toml::from_str(&content).expect("Failed to parse config file")
