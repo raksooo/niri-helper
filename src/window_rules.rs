@@ -2,7 +2,7 @@ use niri_ipc::{Action, Request, Window};
 use regex::Regex;
 use serde::Deserialize;
 
-use crate::ipc::send_command;
+use crate::{ipc::send_command, rules_common::RuleLifetime};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -20,6 +20,9 @@ pub struct WindowRule {
     in_current_column: Option<bool>,
     #[serde(default)]
     in_column: Option<u64>,
+
+    #[serde(default)]
+    rule_lifetime: Option<RuleLifetime>,
 }
 
 #[derive(Eq, PartialEq, Deserialize)]
@@ -36,9 +39,21 @@ impl Default for MatchStrategy {
 }
 
 impl WindowRule {
-    pub fn evaluate(&self, window: &Window) {
+    pub fn evaluate(&mut self, window: &Window) {
         if self.match_window(window) {
+            if let Some(RuleLifetime::Matches(0)) = self.rule_lifetime {
+                return;
+            }
+
+            self.update_rule_lifetime();
             self.perform(window);
+        }
+    }
+
+    fn update_rule_lifetime(&mut self) {
+        if let Some(RuleLifetime::Matches(matches)) = self.rule_lifetime {
+            let new_matches = (matches - 1).clamp(0, u64::MAX);
+            self.rule_lifetime = Some(RuleLifetime::Matches(new_matches));
         }
     }
 
