@@ -2,8 +2,9 @@ use niri_ipc::{Event, Window};
 
 mod config;
 mod ipc;
+mod window_rules;
 
-use config::{read_config, WindowRules};
+use config::{read_config, Config};
 
 fn main() {
     let window_rules = read_config();
@@ -17,7 +18,7 @@ fn main() {
     }
 }
 
-fn handle_event(event: &Event, window_rules: &WindowRules, known_window_ids: &mut Vec<u64>) {
+fn handle_event(event: &Event, window_rules: &Config, known_window_ids: &mut Vec<u64>) {
     match event {
         Event::WindowsChanged { windows } => update_known_window_ids(known_window_ids, windows),
         Event::WindowClosed { id } => {
@@ -39,7 +40,7 @@ fn update_known_window_ids(known_window_ids: &mut Vec<u64>, windows: &Vec<Window
 
 fn handle_window_opened_or_changed(
     window: &Window,
-    window_rules: &WindowRules,
+    window_rules: &Config,
     known_window_ids: &mut Vec<u64>,
 ) {
     if !known_window_ids.contains(&window.id) {
