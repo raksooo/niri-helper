@@ -41,13 +41,15 @@ impl Default for MatchStrategy {
 impl WindowRule {
     pub fn evaluate(&mut self, window: &Window) {
         if self.match_window(window) {
-            if let Some(RuleLifetime::Matches(0)) = self.rule_lifetime {
-                return;
+            if !self.exhausted() {
+                self.update_rule_lifetime();
+                self.perform(window);
             }
-
-            self.update_rule_lifetime();
-            self.perform(window);
         }
+    }
+
+    pub fn exhausted(&self) -> bool {
+        matches!(self.rule_lifetime, Some(RuleLifetime::Matches(0)))
     }
 
     fn update_rule_lifetime(&mut self) {

@@ -1,23 +1,22 @@
 use niri_ipc::Window;
 use serde::Deserialize;
-use std::{env, fs, path::Path, sync::Mutex};
+use std::{env, fs, path::Path};
 
 use crate::window_rules::WindowRule;
 
-pub type Config = Mutex<ConfigInner>;
-
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct ConfigInner {
+pub struct Config {
     #[serde(rename = "window-rule")]
     window_rules: Vec<WindowRule>,
 }
 
-impl ConfigInner {
-    pub fn evaluate(&mut self, window: &Window) {
-        for rule in self.window_rules.iter_mut() {
+impl Config {
+    pub fn evaluate_window(&mut self, window: &Window) {
+        self.window_rules.retain_mut(|rule| {
             rule.evaluate(window);
-        }
+            !rule.exhausted()
+        })
     }
 }
 
@@ -34,5 +33,5 @@ pub fn read_config() -> Config {
     let content = fs::read_to_string(config_path).expect("Failed to read config file");
     let config = toml::from_str(&content).expect("Failed to parse config file");
 
-    Mutex::new(config)
+    config
 }
