@@ -2,7 +2,7 @@ use niri_ipc::{Action, Request, Window};
 use regex::Regex;
 use serde::Deserialize;
 
-use crate::{ipc::send_command, rules_common::RuleLifetime};
+use crate::{niri_ipc::send_command, rules_common::RuleLifetime};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]

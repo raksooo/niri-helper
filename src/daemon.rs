@@ -1,30 +1,34 @@
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use niri_ipc::{Event, Window};
 
 use crate::{
     config::{read_config, Config},
-    ipc,
+    ipc::Ipc,
+    niri_ipc::get_event_reader,
     niri_tracker::NiriTracker,
 };
 
 pub struct Daemon {
-    config: Mutex<Config>,
+    config: Arc<Mutex<Config>>,
     tracker: NiriTracker,
 }
 
 impl Daemon {
-    pub fn new() -> Self {
-        let config = read_config();
+    pub fn run() {
+        let config = Arc::new(Mutex::new(read_config()));
+        Ipc::listen(config.clone());
 
-        Self {
-            config: Mutex::new(config),
+        let daemon = Self {
+            config,
             tracker: NiriTracker::new(),
-        }
+        };
+
+        daemon.events_listen();
     }
 
-    pub fn events_listen(&self) {
-        let mut event_reader = ipc::get_event_reader();
+    fn events_listen(&self) {
+        let mut event_reader = get_event_reader();
         loop {
             let event = event_reader();
             self.handle_event(&event);
