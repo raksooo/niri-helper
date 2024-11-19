@@ -18,6 +18,10 @@ impl Config {
             !rule.exhausted()
         })
     }
+
+    pub fn add_window_rule(&mut self, window_rule: WindowRule) {
+        self.window_rules.push(window_rule);
+    }
 }
 
 pub fn read_config() -> Config {
