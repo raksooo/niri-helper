@@ -1,16 +1,16 @@
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::{Arc, Mutex};
 use std::{fs, thread};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 use crate::window_rules::WindowRule;
 
 const SOCKET_PATH: &str = "/tmp/niri-helper.sock";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 enum IpcCommand {
     WindowRule(WindowRule),
 }
@@ -58,6 +58,15 @@ impl Ipc {
                 break;
             }
         }
+    }
+
+    pub fn register_window_rule(rule: WindowRule) {
+        let mut stream = UnixStream::connect(SOCKET_PATH).expect("Failed to connect to socket");
+        let command = serde_json::to_string(&IpcCommand::WindowRule(rule))
+            .expect("Failed to serialize command");
+        stream
+            .write_all(command.as_bytes())
+            .expect("Failed to send command");
     }
 }
 
