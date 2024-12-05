@@ -4,7 +4,7 @@ use std::{env, fs, path::Path};
 
 use crate::window_rules::WindowRule;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
     #[serde(rename = "window-rule")]
