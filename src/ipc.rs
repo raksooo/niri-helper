@@ -1,20 +1,19 @@
 use niri_ipc::{socket::Socket, Event, Request, Response};
 
 pub fn get_event_reader() -> impl FnMut() -> Event {
-    let socket = get_socket();
-    let (_, mut event_reader) = socket
+    let mut socket = get_socket();
+    let _ = socket
         .send(Request::EventStream)
-        .expect("Failed to start event stream. Are you running niri 1.9+?");
-
-    move || event_reader().expect("Received error in event stream")
+        .expect("Failed to send Event steam request");
+    let mut read_event = socket.read_events();
+    move || read_event().expect("Received error in event stream")
 }
 
 pub fn send_command(request: Request) -> Response {
     get_socket()
         .send(request)
         .expect("Failed to send command")
-        .0
-        .expect("Command failed")
+        .expect("Failed to send command")
 }
 
 fn get_socket() -> Socket {
