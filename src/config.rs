@@ -4,7 +4,7 @@ use std::{env, fs, path::Path};
 
 use crate::window_rules::WindowRule;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
     #[serde(rename = "window-rule")]
@@ -12,10 +12,15 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn evaluate(&self, window: &Window) {
-        for rule in self.window_rules.iter() {
+    pub fn evaluate_window(&mut self, window: &Window) {
+        self.window_rules.retain_mut(|rule| {
             rule.evaluate(window);
-        }
+            !rule.exhausted()
+        })
+    }
+
+    pub fn add_window_rule(&mut self, window_rule: WindowRule) {
+        self.window_rules.push(window_rule);
     }
 }
 
@@ -30,5 +35,7 @@ pub fn read_config() -> Config {
     let config_path = config_dir.join("niri-helper.toml");
 
     let content = fs::read_to_string(config_path).expect("Failed to read config file");
-    toml::from_str(&content).expect("Failed to parse config file")
+    let config = toml::from_str(&content).expect("Failed to parse config file");
+
+    config
 }

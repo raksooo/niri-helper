@@ -1,50 +1,82 @@
-use niri_ipc::{Event, Window};
+use std::process::{Command, Stdio};
+
+use daemon::Daemon;
 
 mod config;
+mod daemon;
 mod ipc;
+mod niri_ipc;
+mod niri_tracker;
+mod process;
+mod rules_common;
 mod window_rules;
 
-use config::{read_config, Config};
+use clap::Parser;
+use ipc::Ipc;
+use rules_common::RuleLifetime;
+use window_rules::WindowRule;
+
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(long, default_value_t = false)]
+    daemon: bool,
+
+    #[arg(long)]
+    in_current_column: bool,
+
+    #[arg(long)]
+    in_column: Option<u64>,
+
+    #[arg(long)]
+    column: Option<u64>,
+
+    #[arg(long)]
+    close: bool,
+
+    #[arg(long)]
+    fixed_width: Option<i32>,
+
+    command: Vec<String>,
+}
 
 fn main() {
-    let window_rules = read_config();
-    let mut event_reader = ipc::get_event_reader();
+    let args = Args::parse();
+    let pid = std::process::id();
 
-    let mut known_window_ids: Vec<u64> = Vec::new();
-
-    loop {
-        let event = event_reader();
-        handle_event(&event, &window_rules, &mut known_window_ids);
+    if args.daemon {
+        Daemon::run();
+        return;
     }
-}
 
-fn handle_event(event: &Event, window_rules: &Config, known_window_ids: &mut Vec<u64>) {
-    match event {
-        Event::WindowsChanged { windows } => update_known_window_ids(known_window_ids, windows),
-        Event::WindowClosed { id } => {
-            known_window_ids.retain(|x| x != id);
-        }
-        Event::WindowOpenedOrChanged { window } => {
-            handle_window_opened_or_changed(window, window_rules, known_window_ids);
-        }
-        _ => (),
+    let mut window_rule = WindowRule::default();
+    window_rule.pid = Some(pid);
+    window_rule.rule_lifetime = Some(RuleLifetime::Matches(1));
+
+    if args.in_current_column {
+        window_rule.in_current_column = Some(args.in_current_column);
     }
-}
-
-fn update_known_window_ids(known_window_ids: &mut Vec<u64>, windows: &Vec<Window>) {
-    known_window_ids.clear();
-    for window in windows {
-        known_window_ids.push(window.id);
+    if args.in_column.is_some() {
+        window_rule.in_column = args.in_column;
     }
-}
+    if args.column.is_some() {
+        window_rule.column = args.column;
+    }
+    if args.close {
+        window_rule.close = Some(args.close);
+    }
+    if args.fixed_width.is_some() {
+        window_rule.fixed_width = args.fixed_width;
+    }
 
-fn handle_window_opened_or_changed(
-    window: &Window,
-    window_rules: &Config,
-    known_window_ids: &mut Vec<u64>,
-) {
-    if !known_window_ids.contains(&window.id) {
-        known_window_ids.push(window.id);
-        window_rules.evaluate(window);
+    Ipc::register_window_rule(window_rule);
+
+    if let Some(command) = args.command.first() {
+        let _ = Command::new(command)
+            .args(args.command.into_iter().skip(1))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .expect("Failed to execute command");
     }
 }

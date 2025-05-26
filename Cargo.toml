@@ -9,3 +9,4 @@ niri-ipc = "25.5.0"
 toml = "0.8.19"
 regex = "1.11.1"
 serde = "1.0.214"
+clap = { version = "4.5.21", features = ["derive"] }

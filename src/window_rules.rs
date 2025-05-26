@@ -1,28 +1,37 @@
-use niri_ipc::{Action, Request, Window};
+use niri_ipc::{Action, Request, SizeChange, Window};
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use crate::ipc::send_command;
+use crate::{niri_ipc::send_command, process::is_child_process, rules_common::RuleLifetime};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Default, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct WindowRule {
     #[serde(default)]
-    app_id: Option<String>,
+    pub app_id: Option<String>,
     #[serde(default)]
-    title: Option<String>,
+    pub title: Option<String>,
     #[serde(default)]
-    match_strategy: MatchStrategy,
+    pub pid: Option<u32>,
+    #[serde(default)]
+    pub match_strategy: MatchStrategy,
 
     #[serde(default)]
-    column: Option<u64>,
+    pub column: Option<u64>,
     #[serde(default)]
-    in_current_column: Option<bool>,
+    pub in_current_column: Option<bool>,
     #[serde(default)]
-    in_column: Option<u64>,
+    pub in_column: Option<u64>,
+    #[serde(default)]
+    pub close: Option<bool>,
+    #[serde(default)]
+    pub fixed_width: Option<i32>,
+
+    #[serde(default)]
+    pub rule_lifetime: Option<RuleLifetime>,
 }
 
-#[derive(Eq, PartialEq, Deserialize)]
+#[derive(Eq, PartialEq, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub enum MatchStrategy {
     Any,
@@ -36,9 +45,23 @@ impl Default for MatchStrategy {
 }
 
 impl WindowRule {
-    pub fn evaluate(&self, window: &Window) {
+    pub fn evaluate(&mut self, window: &Window) {
         if self.match_window(window) {
-            self.perform(window);
+            if !self.exhausted() {
+                self.update_rule_lifetime();
+                self.perform(window);
+            }
+        }
+    }
+
+    pub fn exhausted(&self) -> bool {
+        matches!(self.rule_lifetime, Some(RuleLifetime::Matches(0)))
+    }
+
+    fn update_rule_lifetime(&mut self) {
+        if let Some(RuleLifetime::Matches(matches)) = self.rule_lifetime {
+            let new_matches = (matches - 1).clamp(0, u64::MAX);
+            self.rule_lifetime = Some(RuleLifetime::Matches(new_matches));
         }
     }
 
@@ -46,10 +69,15 @@ impl WindowRule {
         let app_id_match = WindowRule::match_property(self.app_id.clone(), window.app_id.clone());
         let title_match = WindowRule::match_property(self.title.clone(), window.title.clone());
 
+        let pid_match = match (self.pid, window.pid) {
+            (Some(parent_pid), Some(child_pid)) => is_child_process(child_pid as u32, parent_pid),
+            _ => false,
+        };
+
         if self.match_strategy == MatchStrategy::All {
-            app_id_match && title_match
+            app_id_match && title_match && pid_match
         } else {
-            app_id_match || title_match
+            app_id_match || title_match || pid_match
         }
     }
 
@@ -75,6 +103,14 @@ impl WindowRule {
         }
         if let Some(true) = self.in_current_column {
             send_command(Request::Action(Action::ConsumeOrExpelWindowLeft { id }));
+        }
+        if let Some(true) = self.close {
+            send_command(Request::Action(Action::CloseWindow { id }));
+        }
+        if let Some(width) = self.fixed_width {
+            send_command(Request::Action(Action::SetColumnWidth {
+                change: SizeChange::SetFixed(width),
+            }));
         }
     }
 
