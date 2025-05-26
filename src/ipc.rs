@@ -1,6 +1,7 @@
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use std::{fs, thread};
 
 use serde::{Deserialize, Serialize};
@@ -61,7 +62,24 @@ impl Ipc {
     }
 
     pub fn register_window_rule(rule: WindowRule) {
-        let mut stream = UnixStream::connect(SOCKET_PATH).expect("Failed to connect to socket");
+        let mut stream: UnixStream;
+
+        let mut counter = 0;
+        loop {
+            if let Ok(socket_stream) = UnixStream::connect(SOCKET_PATH) {
+                stream = socket_stream;
+                break;
+            } else {
+                println!("Failed to connect to niri-helper daemon");
+                if counter >= 10 {
+                    panic!("Failed to connect to socket, is the daemon running?");
+                }
+
+                counter += 1;
+                thread::sleep(Duration::from_millis(1000));
+            }
+        }
+
         let command = serde_json::to_string(&IpcCommand::WindowRule(rule))
             .expect("Failed to serialize command");
         stream
