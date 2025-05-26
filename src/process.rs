@@ -1,10 +1,13 @@
 use std::fs;
 
-pub fn is_child_process(child_pid: u32, parent_pid: u32) -> bool {
+pub fn is_in_process_tree(child_pid: u32, parent_pid: u32) -> bool {
+    if child_pid == parent_pid {
+        return true;
+    }
+
     match get_parent_pid(child_pid) {
         0 => false,
-        pid if pid == parent_pid => true,
-        pid => is_child_process(pid, parent_pid),
+        pid => is_in_process_tree(pid, parent_pid),
     }
 }
 

@@ -2,7 +2,7 @@ use niri_ipc::{Action, Request, SizeChange, Window};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{niri_ipc::send_command, process::is_child_process, rules_common::RuleLifetime};
+use crate::{niri_ipc::send_command, process::is_in_process_tree, rules_common::RuleLifetime};
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 #[serde(rename_all = "kebab-case")]
@@ -70,7 +70,7 @@ impl WindowRule {
         let title_match = WindowRule::match_property(self.title.clone(), window.title.clone());
 
         let pid_match = match (self.pid, window.pid) {
-            (Some(parent_pid), Some(child_pid)) => is_child_process(child_pid as u32, parent_pid),
+            (Some(parent_pid), Some(child_pid)) => is_in_process_tree(child_pid as u32, parent_pid),
             _ => false,
         };
 
