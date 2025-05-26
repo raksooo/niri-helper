@@ -50,7 +50,7 @@ rec {
               Service = {
                 Type = "simple";
                 Restart = "always";
-                ExecStart = "${lib.getExe self.packages.${pkgs.system}.default}";
+                ExecStart = "${lib.getExe self.packages.${pkgs.system}.default} --daemon";
               };
 
               Install = {
