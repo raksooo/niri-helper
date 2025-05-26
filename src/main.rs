@@ -1,4 +1,4 @@
-use std::process::{Command, Stdio};
+use std::{os::unix::process::CommandExt, process::Command};
 
 use daemon::Daemon;
 
@@ -73,10 +73,7 @@ fn main() {
     if let Some(command) = args.command.first() {
         let _ = Command::new(command)
             .args(args.command.into_iter().skip(1))
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .expect("Failed to execute command");
+            .exec();
+        println!("Failed to execute command")
     }
 }
