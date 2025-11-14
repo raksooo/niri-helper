@@ -34,8 +34,11 @@ pub fn read_config() -> Config {
     );
     let config_path = config_dir.join("niri-helper.toml");
 
-    let content = fs::read_to_string(config_path).expect("Failed to read config file");
-    let config = toml::from_str(&content).expect("Failed to parse config file");
-
-    config
+    if let Ok(content) = fs::read_to_string(config_path) {
+        toml::from_str(&content).expect("Failed to parse config file")
+    } else {
+        Config {
+            window_rules: vec![],
+        }
+    }
 }
