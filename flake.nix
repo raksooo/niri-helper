@@ -37,7 +37,7 @@ rec {
               (lib.hm.assertions.assertPlatform "services.${name}" pkgs lib.platforms.linux)
             ];
 
-            home.packages = [ self.packages.${pkgs.system}.default ];
+            home.packages = [ self.packages.${pkgs.stdenv.hostPlatform.system}.default ];
 
             systemd.user.services.${name} = {
               Unit = {
@@ -50,7 +50,9 @@ rec {
               Service = {
                 Type = "simple";
                 Restart = "always";
-                ExecStart = "${lib.getExe self.packages.${pkgs.system}.default} --daemon";
+                ExecStart = "${
+                  lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default
+                } --daemon";
               };
 
               Install = {
