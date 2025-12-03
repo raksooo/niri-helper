@@ -54,7 +54,7 @@ impl Daemon {
         }
     }
 
-    fn attain_config(&self) -> MutexGuard<Config> {
+    fn attain_config(&self) -> MutexGuard<'_, Config> {
         self.config.lock().expect("Failed to attain config lock")
     }
 }

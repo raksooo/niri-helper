@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 serde_json = "1.0.133"
-niri-ipc = "25.8.0"
+niri-ipc = "25.11.0"
 toml = "0.9.5"
 regex = "1.11.1"
 serde = "1.0.214"

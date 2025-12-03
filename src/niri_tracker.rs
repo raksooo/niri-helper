@@ -35,7 +35,7 @@ impl NiriTracker {
         self.attain_window_ids().retain(|x| x != id);
     }
 
-    fn attain_window_ids(&self) -> MutexGuard<Vec<u64>> {
+    fn attain_window_ids(&self) -> MutexGuard<'_, Vec<u64>> {
         self.window_ids
             .lock()
             .expect("Failed to attain known_window_ids lock")
